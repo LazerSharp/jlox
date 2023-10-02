@@ -1,19 +1,42 @@
 package com.craftinginterpreters.lox;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
 
 import static com.craftinginterpreters.lox.TokenType.*;
+
+
 /*
 
-program        →  statement * EOF;
+
+program        → declaration* EOF ;
+
+declaration    → varDecl
+               | statement ;
+
+varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
 statement      → exprStmt
-               | printStmt ;
+               | forStmt
+               | ifStmt
+               | printStmt
+               | whileStmt
+               | block;
+forStmt        → "for" "(" (varDecl | exprStmt | ";")
+                    expression ";"
+                    expression ";" ")" statement ;
+
+whileStmt      → "while" "(" expression ")" statement ;
+ifStmt         → "if" "(" expression ")" statement ("else" statement)? ;
+block          → "{" declaration* "}" ;
 exprStmt       → expression ";" ;
 printStmt      → print expression ";" ;
-
-expression     → equality ;
+expression     → assignment ;
+assignment     → IDENTIFIER "=" assignment
+                | logic_or;
+logic_or       → logic_and (or logic_and)* ;
+logic_and      → equality (or equality)* ;
 equality       → comparison ( ( "!=" | "==" ) comparison ) * ;
 comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term ) * ;
 term           → factor ( ( "-" | "+" ) factor ) * ;
@@ -46,14 +69,117 @@ public class Parser {
     List<Stmt> program() {
         List<Stmt> statements = new ArrayList<>();
         while(!isAtEnd()) {
-            statements.add(statement());
+            statements.add(declaration());
         }
         return statements;
     }
 
+    private Stmt declaration() {
+        try {
+            if (match(VAR)) {
+                return varDecl();
+            }
+            return statement();
+        } catch (ParseError error) {
+            synchronize();
+            return null;
+        }
+    }
+
+    private Stmt varDecl() {
+        Token name = consume(IDENTIFIER, "Expect variable name.");
+        Expr initializer = null;
+        if (match(EQUAL)) {
+            initializer = expression();
+        }
+        consume(SEMICOLON, "Expect ';' after variable declaration.");
+        return new Stmt.Var(name, initializer);
+    }
+
+
     Stmt statement() {
+        if(match(IF)) return ifStmt();
         if(match(PRINT)) return printStmt();
+        if(match(WHILE)) return whileStmt();
+        if(match(FOR)) return forStmt();
+        if(match(LEFT_BRACE)) return block();
         return expressionStmt();
+    }
+
+    private Stmt forStmt() {
+        consume(LEFT_PAREN, "Expected '(' after for.");
+        Stmt initializer;
+        if (match(SEMICOLON)) {
+            initializer = null;
+        } else {
+            if (match(VAR)) {
+                initializer = varDecl();
+            } else {
+                initializer = expressionStmt();
+            }
+        }
+
+        Expr condition;
+        if (match(SEMICOLON)) {
+            condition = null;
+        } else {
+            condition = expression();
+            consume(SEMICOLON, "Expected ';' after condition in for loop");
+        }
+
+        Expr increment;
+        if (match(RIGHT_PAREN)) {
+           increment = null;
+        } else {
+            increment = expression();
+            consume(RIGHT_PAREN, "Expected ')' after increment in for loop");
+        }
+        Stmt body = statement();
+        if(increment != null) {
+            body = new Stmt.Block(Arrays.asList(
+                    body,
+                    new Stmt.Expression(increment)));
+        }
+        if(condition == null) {
+            condition = new Expr.Literal(true);
+        }
+
+        Stmt loop = new Stmt.While(condition, body);
+
+        if(initializer != null) {
+            loop = new Stmt.Block(Arrays.asList(initializer, loop));
+        }
+
+        return loop;
+    }
+
+    Stmt whileStmt() {
+        consume(LEFT_PAREN, "Expected '(' after while.");
+        Expr condition = expression();
+        consume(RIGHT_PAREN, "Expected ')' after while expression.");
+        Stmt whileStmt = statement();
+        return new Stmt.While(condition, whileStmt);
+    }
+
+    Stmt ifStmt() {
+        consume(LEFT_PAREN, "Expected '(' after if block");
+        Expr condition = expression();
+        consume(RIGHT_PAREN, "Expected ')' after if block expression");
+        Stmt ifBranch = statement();
+        Stmt elseBranch = null;
+        if(match(ELSE)) {
+            elseBranch = statement();
+        }
+        return new Stmt.If(condition, ifBranch, elseBranch);
+    }
+
+    private Stmt block() {
+        List<Stmt> statements = new ArrayList<>();
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+            statements.add(declaration());
+        }
+        consume(RIGHT_BRACE, "Expected '}' at the end of a block");
+        return new Stmt.Block(statements);
     }
 
     private Stmt expressionStmt() {
@@ -70,12 +196,32 @@ public class Parser {
 
 
     Expr expression() {
-        return equality();
+        return assignment();
     }
 
+    Expr assignment() {
+        Expr expr = logicalOr();
+        if(match(EQUAL)) {
+            Token equals = previous();
+            Expr value = assignment();
+            if(expr instanceof Expr.Variable) {
+                Token name = ((Expr.Variable)expr).name;
+                return new Expr.Assign(name, value);
+            }
+            error(equals, "Invalid assignment target.");
+        }
+        return expr;
+    }
 
+    private Expr logicalOr() {
+        return binarayExpr(this::logicalAnd, OR);
+    }
 
-     private Expr equality() {
+    private Expr logicalAnd() {
+        return binarayExpr(this::equality, AND);
+    }
+
+    private Expr equality() {
         return binarayExpr(this::comparison, BANG_EQUAL, EQUAL_EQUAL);
     }
 
@@ -107,6 +253,9 @@ public class Parser {
         if(match(NUMBER, STRING)) {
             Object val = previous().literal;
             return new Expr.Literal(val);
+        }
+        if(match(IDENTIFIER)) {
+            return new Expr.Variable(previous());
         }
 
         if(match(LEFT_PAREN)) {

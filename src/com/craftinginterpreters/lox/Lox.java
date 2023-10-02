@@ -49,22 +49,37 @@ public class Lox {
         if (hadRuntimeError) System.exit(70);
     }
 
+
     private static  void run(String source) {
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
 
-        // For now, just print the tokens.
-//        for (Token token : tokens) {
-//           System.out.println(token);
-//        }
+        //if() return;
 
         Parser parser = new Parser(tokens);
         List<Stmt> statements = parser.parse();
-        if(hadError) return;
+
+        if(hadError) {
+            printExpression(tokens);
+            return;
+        };
+        //System.out.println(new AstRenderer().render(statements));
 
         //System.out.println(new AstPrinter().print(expr));
         interpreter.interpret(statements);
 
+    }
+
+    private static boolean printExpression(List<Token> tokens) {
+        try {
+            var expr = new Parser(tokens).expression();
+            var val = interpreter.evaluate(expr);
+            System.out.println("Expression value: " + interpreter.stringify(val));
+            return true;
+        } catch (Exception ex) {
+            // exit silently
+            return false;
+        }
     }
 
     static void error(int line, String message) {

@@ -1,6 +1,7 @@
-print (1+3*2+5)*100;
-print "Hello " + "world!";
-(2 >= 2);
-print "one";
-print true;
-print 2 + 1;
+var i = 0;
+for(;;) {
+    print i;
+    i = i + 1;
+}
+
+

@@ -5,7 +5,7 @@ import java.util.List;
 
 public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>{
 
-
+    private Environment environment = new Environment();
 
     void interpret(List<Stmt> statements) {
         try {
@@ -21,8 +21,15 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>{
         stmt.accept(this);
     }
 
-    private Object evaluate(Expr expr){
+    Object evaluate(Expr expr){
         return expr.accept(this);
+    }
+
+    @Override
+    public Object visitAssignExpr(Expr.Assign expr) {
+        var val = evaluate(expr.expression);
+        environment.assign(expr.name, val);
+        return val;
     }
 
     @Override
@@ -73,6 +80,14 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>{
             }
             case BANG_EQUAL ->  !isEqual(left, right);
             case EQUAL_EQUAL -> isEqual(left, right);
+            case AND -> {
+                if(isTruthy(left)) yield right;
+                yield left;
+            }
+            case OR -> {
+                if(!isTruthy(left)) yield right;
+                yield left;
+            }
             default -> null;
         };
     }
@@ -100,6 +115,11 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>{
         };
     }
 
+    @Override
+    public Object visitVariableExpr(Expr.Variable expr) {
+        return environment.get(expr.name);
+    }
+
     private Boolean isTruthy(Object value) {
         if(value == null) return false;
         if(value instanceof Boolean) return (boolean) value;
@@ -113,7 +133,7 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>{
         return a.equals(b);
     }
 
-    private String stringify(Object object) {
+     String stringify(Object object) {
         if (object == null) return "nil";
 
         if (object instanceof Double) {
@@ -139,6 +159,8 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>{
         throw new RuntimeError(operator, "Operands must be numbers.");
     }
 
+
+
     @Override
     public Void visitExpressionStmt(Stmt.Expression stmt) {
         evaluate(stmt.expression);
@@ -150,5 +172,56 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>{
         var val = evaluate(stmt.expression);
         System.out.println(stringify(val));
         return null;
+    }
+
+    @Override
+    public Void visitVarStmt(Stmt.Var stmt) {
+        Object value = Constants.UNINITIALIZED;
+        if(stmt.initializer != null) {
+            value = evaluate(stmt.initializer);
+        }
+        environment.define(stmt.name.lexeme, value);
+        return null;
+    }
+
+    @Override
+    public Void visitIfStmt(Stmt.If stmt) {
+        if(isTruthy(evaluate(stmt.condition))) {
+            execute(stmt.ifBranch);
+        } else {
+            if(stmt.elseBranch != null) {
+                execute(stmt.elseBranch);
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public Void visitWhileStmt(Stmt.While stmt) {
+        while (isTruthy(evaluate(stmt.condition))) {
+            execute(stmt.whileStmt);
+        }
+        return null;
+    }
+
+    @Override
+    public Void visitBlockStmt(Stmt.Block stmt) {
+        executeBlock(stmt.statements, new Environment(this.environment));
+        return null;
+    }
+
+    private void executeBlock(List<Stmt> statements, Environment environment) {
+
+        var outer = this.environment;
+        try {
+            this.environment = environment;
+            for (Stmt stmt: statements) {
+                execute(stmt);
+            }
+        } finally {
+            this.environment = outer;
+        }
+
+
     }
 }
