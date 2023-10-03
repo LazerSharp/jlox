@@ -13,16 +13,22 @@ import static com.craftinginterpreters.lox.TokenType.*;
 
 program        → declaration* EOF ;
 
-declaration    → varDecl
+declaration    → funDecl
+               | varDecl
                | statement ;
 
+funDecl        → "fun" function ;
+function       → IDENTIFIER "(" parameters? ")" block;
+parameters     → IDENTIFIER ( "," IDENTIFIER )* ;
 varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
 statement      → exprStmt
                | forStmt
                | ifStmt
                | printStmt
                | whileStmt
-               | block;
+               | block
+               | returnStmt;
+returnStmt     → "return" (expression) ";" ;
 forStmt        → "for" "(" (varDecl | exprStmt | ";")
                     expression ";"
                     expression ";" ")" statement ;
@@ -42,7 +48,9 @@ comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term ) * ;
 term           → factor ( ( "-" | "+" ) factor ) * ;
 factor         → unary ( ( "/" | "*" ) unary ) * ;
 unary          → ( "!" | "-" ) unary
-               | primary ;
+               | call ;
+call           → primary ( "(" arguments? ")" )* ;
+arguments      → expression ( "," expression )* ;
 primary        → NUMBER | STRING | "true" | "false" | "nil"
                | "(" expression ")" ;
 
@@ -76,6 +84,9 @@ public class Parser {
 
     private Stmt declaration() {
         try {
+            if(match(FUN)) {
+                return funDecl();
+            }
             if (match(VAR)) {
                 return varDecl();
             }
@@ -84,6 +95,21 @@ public class Parser {
             synchronize();
             return null;
         }
+    }
+
+    private Stmt funDecl() {
+        Token fun = consume(IDENTIFIER, "Expect fun name (identifier)");
+        consume(LEFT_PAREN, "Expect '('");
+        List<Token> parameters = new ArrayList<>();
+        if(check(IDENTIFIER)){
+            do {
+                parameters.add(consume(IDENTIFIER, "Expected Identifier"));
+            } while (match(COMMA));
+        }
+        consume(RIGHT_PAREN, "Expect ')'");
+        consume(LEFT_BRACE, "Expect '{'");
+        Stmt.Block body = block();
+        return new Stmt.Fun(fun, parameters, body.statements);
     }
 
     private Stmt varDecl() {
@@ -103,7 +129,18 @@ public class Parser {
         if(match(WHILE)) return whileStmt();
         if(match(FOR)) return forStmt();
         if(match(LEFT_BRACE)) return block();
+        if(match(RETURN)) return returnStmt();
         return expressionStmt();
+    }
+
+    private Stmt returnStmt() {
+        Token keyword = previous();
+        Expr expr = null;
+        if(!check(SEMICOLON)) {
+            expr = expression();
+        }
+        consume(SEMICOLON, "return stmt: Semicolon expected ");
+        return new Stmt.Return(keyword, expr);
     }
 
     private Stmt forStmt() {
@@ -173,7 +210,7 @@ public class Parser {
         return new Stmt.If(condition, ifBranch, elseBranch);
     }
 
-    private Stmt block() {
+    private Stmt.Block block() {
         List<Stmt> statements = new ArrayList<>();
         while (!check(RIGHT_BRACE) && !isAtEnd()) {
             statements.add(declaration());
@@ -241,7 +278,29 @@ public class Parser {
         if(match(MINUS, BANG)) {
             return new Expr.Unary(previous(), unary());
         }
-        return primary();
+        return call();
+    }
+
+    private Expr call() {
+        Expr expr = primary();
+        while (match(LEFT_PAREN)){
+            expr = finishCall(expr);
+        }
+        return expr;
+    }
+
+    private Expr finishCall(Expr callee) {
+        List<Expr> arguments = new ArrayList<>();
+        if(!check(RIGHT_PAREN)) {
+            do {
+                if (arguments.size() >= 255) {
+                    error(peek(), "Can't have more than 255 arguments.");
+                }
+                arguments.add(expression());
+            } while (match(COMMA));
+        }
+        Token paren = consume(RIGHT_PAREN, "Expected ')' after function arguments");
+        return new Expr.Call(callee, paren, arguments);
     }
 
     private Expr primary() {

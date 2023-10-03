@@ -19,6 +19,7 @@ public class GenerateAst {
                 "Grouping : Expr expression",
                 "Literal  : Object value",
                 "Unary    : Token operator, Expr right",
+                "Call     : Expr callee, Token paren, List<Expr> arguments",
                 "Variable : Token name"
         ));
 
@@ -28,7 +29,9 @@ public class GenerateAst {
                 "Block      : List<Stmt> statements",
                 "Expression : Expr expression",
                 "Print      : Expr expression",
-                "Var        : Token name, Expr initializer"
+                "Var        : Token name, Expr initializer",
+                "Fun        : Token name, List<Token> parameters, List<Stmt> block",
+                "Return     : Token keyword, Expr expression"
         ));
     }
 

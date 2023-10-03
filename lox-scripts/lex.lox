@@ -1,7 +1,24 @@
 var i = 0;
-for(;;) {
+for(;i<10;) {
     print i;
     i = i + 1;
 }
+print "Time: " + time();
+fun so_much_fun(a) {
+    print time() + ": Hey " + a + ", I am happy!!!";
+}
+
+so_much_fun("Kucho");
+print(so_much_fun);
+print(time);
+
+fun sayHi(first, last) {
+  var msg = "Hi, " + first + " " + last + "!";
+  print msg;
+  return msg;
+}
+
+var ret = sayHi("Dear", "Reader");
+print "Returned: " + ret;
 
 

@@ -63,6 +63,11 @@ public class AstRenderer implements Expr.Visitor<String>, Stmt.Visitor<String> {
     }
 
     @Override
+    public String visitCallExpr(Expr.Call expr) {
+        return null;
+    }
+
+    @Override
     public String visitVariableExpr(Expr.Variable expr) {
         return null;
     }
@@ -98,6 +103,16 @@ public class AstRenderer implements Expr.Visitor<String>, Stmt.Visitor<String> {
 
     @Override
     public String visitVarStmt(Stmt.Var stmt) {
+        return null;
+    }
+
+    @Override
+    public String visitFunStmt(Stmt.Fun stmt) {
+        return null;
+    }
+
+    @Override
+    public String visitReturnStmt(Stmt.Return stmt) {
         return null;
     }
 

@@ -1,11 +1,33 @@
 package com.craftinginterpreters.lox;
 
+import java.util.Date;
 import java.util.List;
 
 
 public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>{
 
-    private Environment environment = new Environment();
+    Environment globals = new Environment();
+
+    Environment environment = globals;
+
+    Interpreter() {
+        globals.define("time", new LoxCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public Object call(Interpreter interpreter, List<Object> arguments) {
+                return new Date().toString();
+            }
+
+            @Override
+            public String toString() {
+                return "<native fun time>";
+            }
+        });
+    }
 
     void interpret(List<Stmt> statements) {
         try {
@@ -116,6 +138,19 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>{
     }
 
     @Override
+    public Object visitCallExpr(Expr.Call expr) {
+
+        LoxCallable function = (LoxCallable) evaluate(expr.callee);
+        List<Expr> arguments = expr.arguments;
+        if(expr.arguments.size() != function.arity()) {
+            throw new RuntimeError(expr.paren, "Expected " +
+                    function.arity() + " arguments but got " +
+                    arguments.size() + ".");
+        }
+        return function.call(this, arguments.stream().map(this::evaluate).toList());
+    }
+
+    @Override
     public Object visitVariableExpr(Expr.Variable expr) {
         return environment.get(expr.name);
     }
@@ -185,6 +220,17 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>{
     }
 
     @Override
+    public Void visitFunStmt(Stmt.Fun stmt) {
+        this.environment.define(stmt.name.lexeme, new LoxFun(stmt));
+        return null;
+    }
+
+    @Override
+    public Void visitReturnStmt(Stmt.Return stmt) {
+        throw new Return(evaluate(stmt.expression));
+    }
+
+    @Override
     public Void visitIfStmt(Stmt.If stmt) {
         if(isTruthy(evaluate(stmt.condition))) {
             execute(stmt.ifBranch);
@@ -210,7 +256,7 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>{
         return null;
     }
 
-    private void executeBlock(List<Stmt> statements, Environment environment) {
+     void executeBlock(List<Stmt> statements, Environment environment) {
 
         var outer = this.environment;
         try {

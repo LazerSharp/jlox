@@ -10,6 +10,8 @@ abstract class Stmt {
     R visitExpressionStmt(Expression stmt);
     R visitPrintStmt(Print stmt);
     R visitVarStmt(Var stmt);
+    R visitFunStmt(Fun stmt);
+    R visitReturnStmt(Return stmt);
   }
   static class If extends Stmt {
     If(Expr condition, Stmt ifBranch, Stmt elseBranch) {
@@ -90,6 +92,36 @@ abstract class Stmt {
 
     final Token name;
     final Expr initializer;
+  }
+  static class Fun extends Stmt {
+    Fun(Token name, List<Token> parameters, List<Stmt> block) {
+      this.name = name;
+      this.parameters = parameters;
+      this.block = block;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+      return visitor.visitFunStmt(this);
+    }
+
+    final Token name;
+    final List<Token> parameters;
+    final List<Stmt> block;
+  }
+  static class Return extends Stmt {
+    Return(Token keyword, Expr expression) {
+      this.keyword = keyword;
+      this.expression = expression;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+      return visitor.visitReturnStmt(this);
+    }
+
+    final Token keyword;
+    final Expr expression;
   }
 
   abstract <R> R accept(Visitor<R> visitor);
