@@ -18,7 +18,8 @@ declaration    → funDecl
                | statement ;
 
 funDecl        → "fun" function ;
-function       → IDENTIFIER "(" parameters? ")" block;
+function       → IDENTIFIER inlineFun;
+inlineFun     → "(" parameters? ")" block;
 parameters     → IDENTIFIER ( "," IDENTIFIER )* ;
 varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
 statement      → exprStmt
@@ -38,6 +39,7 @@ ifStmt         → "if" "(" expression ")" statement ("else" statement)? ;
 block          → "{" declaration* "}" ;
 exprStmt       → expression ";" ;
 printStmt      → print expression ";" ;
+
 expression     → assignment ;
 assignment     → IDENTIFIER "=" assignment
                 | logic_or;
@@ -52,7 +54,7 @@ unary          → ( "!" | "-" ) unary
 call           → primary ( "(" arguments? ")" )* ;
 arguments      → expression ( "," expression )* ;
 primary        → NUMBER | STRING | "true" | "false" | "nil"
-               | "(" expression ")" ;
+               | "(" expression ")" | inlineFun ;
 
 */
 public class Parser {
@@ -99,6 +101,11 @@ public class Parser {
 
     private Stmt funDecl() {
         Token fun = consume(IDENTIFIER, "Expect fun name (identifier)");
+        Expr.InlineFun fe = inlineFun();
+        return new Stmt.Fun(fun, fe.parameters, fe.statements);
+    }
+
+    private Expr.InlineFun inlineFun() {
         consume(LEFT_PAREN, "Expect '('");
         List<Token> parameters = new ArrayList<>();
         if(check(IDENTIFIER)){
@@ -109,7 +116,7 @@ public class Parser {
         consume(RIGHT_PAREN, "Expect ')'");
         consume(LEFT_BRACE, "Expect '{'");
         Stmt.Block body = block();
-        return new Stmt.Fun(fun, parameters, body.statements);
+        return new Expr.InlineFun(parameters, body.statements);
     }
 
     private Stmt varDecl() {
@@ -321,6 +328,10 @@ public class Parser {
             Expr expr = expression();
             consume(RIGHT_PAREN, "Expect ')' after expression.");
             return new Expr.Grouping(expr);
+        }
+
+        if(match(FUN)) {
+            return inlineFun();
         }
         throw error(peek(), "Expect expression.");
     }

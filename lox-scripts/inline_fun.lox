@@ -1,0 +1,9 @@
+var x = fun (a) {
+    print "Hello " + a;
+};
+
+var y = fun (f, param) {
+    f(param);
+};
+
+y(x, "Blob!");

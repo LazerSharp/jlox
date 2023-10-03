@@ -155,6 +155,11 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>{
         return environment.get(expr.name);
     }
 
+    @Override
+    public Object visitInlineFunExpr(Expr.InlineFun expr) {
+        return new LoxFun(expr, environment);
+    }
+
     private Boolean isTruthy(Object value) {
         if(value == null) return false;
         if(value instanceof Boolean) return (boolean) value;
@@ -221,7 +226,7 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>{
 
     @Override
     public Void visitFunStmt(Stmt.Fun stmt) {
-        this.environment.define(stmt.name.lexeme, new LoxFun(stmt));
+        this.environment.define(stmt.name.lexeme, new LoxFun(stmt, environment));
         return null;
     }
 

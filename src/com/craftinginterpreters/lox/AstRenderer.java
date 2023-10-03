@@ -73,6 +73,11 @@ public class AstRenderer implements Expr.Visitor<String>, Stmt.Visitor<String> {
     }
 
     @Override
+    public String visitInlineFunExpr(Expr.InlineFun expr) {
+        return null;
+    }
+
+    @Override
     public String visitIfStmt(Stmt.If stmt) {
         return null;
     }

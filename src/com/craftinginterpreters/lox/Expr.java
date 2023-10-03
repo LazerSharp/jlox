@@ -11,6 +11,7 @@ abstract class Expr {
     R visitUnaryExpr(Unary expr);
     R visitCallExpr(Call expr);
     R visitVariableExpr(Variable expr);
+    R visitInlineFunExpr(InlineFun expr);
   }
   static class Assign extends Expr {
     Assign(Token name, Expr expression) {
@@ -107,6 +108,20 @@ abstract class Expr {
     }
 
     final Token name;
+  }
+  static class InlineFun extends Expr {
+    InlineFun(List<Token> parameters, List<Stmt> statements) {
+      this.parameters = parameters;
+      this.statements = statements;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+      return visitor.visitInlineFunExpr(this);
+    }
+
+    final List<Token> parameters;
+    final List<Stmt> statements;
   }
 
   abstract <R> R accept(Visitor<R> visitor);
