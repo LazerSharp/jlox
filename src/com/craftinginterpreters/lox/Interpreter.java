@@ -1,10 +1,14 @@
 package com.craftinginterpreters.lox;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>{
+
+    Map<Expr, Integer> locals = new HashMap<>();
 
     Environment globals = new Environment();
 
@@ -152,7 +156,11 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>{
 
     @Override
     public Object visitVariableExpr(Expr.Variable expr) {
-        return environment.get(expr.name);
+        if(!locals.containsKey(expr)) {
+            return globals.get(expr.name);
+        }
+        var distance = locals.get(expr);
+        return environment.getAt(distance, expr.name);
     }
 
     @Override
@@ -274,5 +282,9 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>{
         }
 
 
+    }
+
+    public void resolve(Expr.Variable expr, int distance) {
+        locals.put(expr, distance);
     }
 }

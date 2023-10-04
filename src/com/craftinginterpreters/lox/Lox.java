@@ -66,6 +66,10 @@ public class Lox {
         //System.out.println(new AstRenderer().render(statements));
 
         //System.out.println(new AstPrinter().print(expr));
+        new Resolver(interpreter).resolve(statements);
+
+        if(hadError) return;
+
         interpreter.interpret(statements);
 
     }

@@ -1,0 +1,22 @@
+var x = 3;
+{
+    var y = 1;
+    print x;
+    print y;
+    {
+        print y;
+        {
+            var y = 100;
+            print y;
+            var  bad = fun () {
+              var a = "first";
+              print "bad";
+              return y;
+            };
+            print bad();
+        }
+    }
+}
+
+
+

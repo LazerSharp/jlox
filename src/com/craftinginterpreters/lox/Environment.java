@@ -48,4 +48,16 @@ public class Environment {
         throw new RuntimeError(name,
                 "Undefined variable '" + name.lexeme + "'.");
     }
+
+    public Object getAt(Integer distance, Token name) {
+        return ancestor(distance).values.get(name.lexeme);
+    }
+
+    private Environment ancestor(Integer distance) {
+        Environment environment = this;
+        for(var i=0; i < distance;i++) {
+            environment = environment.enclosing;
+        }
+        return environment;
+    }
 }

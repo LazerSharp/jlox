@@ -7,3 +7,14 @@ var y = fun (f, param) {
 };
 
 y(x, "Blob!");
+
+var a = "global";
+{
+  fun showA() {
+    print a;
+  }
+
+  showA();
+  var a = "block";
+  showA();
+}
