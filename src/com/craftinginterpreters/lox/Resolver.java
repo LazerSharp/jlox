@@ -102,9 +102,7 @@ public class Resolver implements Stmt.Visitor<Void>, Expr.Visitor<Void> {
 
     @Override
     public Void visitAssignExpr(Expr.Assign expr) {
-        declare(expr.name);
         resolve(expr.expression);
-        define(expr.name);
         return null;
     }
 
@@ -139,9 +137,6 @@ public class Resolver implements Stmt.Visitor<Void>, Expr.Visitor<Void> {
         resolveExpressions(expr.arguments);
         return null;
     }
-
-
-    
 
     @Override
     public Void visitInlineFunExpr(Expr.InlineFun expr) {
@@ -191,8 +186,13 @@ public class Resolver implements Stmt.Visitor<Void>, Expr.Visitor<Void> {
 
     @Override
     public Void visitFunStmt(Stmt.Fun stmt) {
+
+        declare(stmt.name);
+        define(stmt.name);
+
         FunType enclosingFun = currentFun;
         currentFun = FunType.FUNCTION;
+
         beginScope();
         for(Token param: stmt.parameters) {
             declare(param);
@@ -200,6 +200,7 @@ public class Resolver implements Stmt.Visitor<Void>, Expr.Visitor<Void> {
         }
         resolve(stmt.block);
         endScope();
+
         currentFun = enclosingFun;
         return null;
     }
