@@ -13,13 +13,15 @@ import static com.craftinginterpreters.lox.TokenType.*;
 
 program        → declaration* EOF ;
 
-declaration    → funDecl
+declaration    → classDecl
+               | funDecl
                | varDecl
                | statement ;
 
+classDecl      → "class" IDENTIFIER "{" function* "}" ;
 funDecl        → "fun" function ;
 function       → IDENTIFIER inlineFun;
-inlineFun     → "(" parameters? ")" block;
+inlineFun      → "(" parameters? ")" block;
 parameters     → IDENTIFIER ( "," IDENTIFIER )* ;
 varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
 statement      → exprStmt
@@ -87,10 +89,13 @@ public class Parser {
     private Stmt declaration() {
         try {
             if(match(FUN)) {
-                return funDecl();
+                return funDecl("function");
             }
             if (match(VAR)) {
                 return varDecl();
+            }
+            if (match(CLASS)){
+                return classDecl();
             }
             return statement();
         } catch (ParseError error) {
@@ -99,8 +104,18 @@ public class Parser {
         }
     }
 
-    private Stmt funDecl() {
-        Token fun = consume(IDENTIFIER, "Expect fun name (identifier)");
+    private Stmt.Class classDecl() {
+        Token cls = consume(IDENTIFIER, "Expect class name (identifier)");
+        consume(LEFT_BRACE, "Expected left brace");
+        List<Stmt.Fun> methods = new ArrayList<>();
+        while (peek().type == RIGHT_BRACE) {
+            methods.add(funDecl("method"));
+        }
+        return new Stmt.Class(cls, methods);
+    }
+
+    private Stmt.Fun funDecl(String type) {
+        Token fun = consume(IDENTIFIER, "Expect " + type + " name (identifier)");
         Expr.InlineFun fe = inlineFun();
         return new Stmt.Fun(fun, fe.parameters, fe.statements);
     }

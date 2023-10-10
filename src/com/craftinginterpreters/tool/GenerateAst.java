@@ -1,4 +1,4 @@
-package com.craftinginterpreters.lox.tool;
+package com.craftinginterpreters.tool;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -32,7 +32,8 @@ public class GenerateAst {
                 "Print      : Expr expression",
                 "Var        : Token name, Expr initializer",
                 "Fun        : Token name, List<Token> parameters, List<Stmt> block",
-                "Return     : Token keyword, Expr expression"
+                "Return     : Token keyword, Expr expression",
+                "Class      : Token name, List<Fun> methods"
         ));
     }
 

@@ -213,4 +213,9 @@ public class Resolver implements Stmt.Visitor<Void>, Expr.Visitor<Void> {
         resolve(stmt.expression);
         return null;
     }
+
+    @Override
+    public Void visitClassStmt(Stmt.Class stmt) {
+        return null;
+    }
 }

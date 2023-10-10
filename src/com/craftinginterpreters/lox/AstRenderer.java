@@ -121,6 +121,11 @@ public class AstRenderer implements Expr.Visitor<String>, Stmt.Visitor<String> {
         return null;
     }
 
+    @Override
+    public String visitClassStmt(Stmt.Class stmt) {
+        return null;
+    }
+
     //String render
 
     private String graphElm(String prefix) {
